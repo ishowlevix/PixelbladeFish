@@ -40,7 +40,7 @@ sg.Parent = CoreGui
 
 -- Main window
 local main = Instance.new("Frame", sg)
-main.Size = UDim2.new(0, 340, 0, 490)
+main.Size = UDim2.new(0, 340, 0, 590)
 main.Position = UDim2.new(0.04, 0, 0.22, 0)
 main.BackgroundColor3 = Color3.fromRGB(12, 14, 20)
 main.BorderSizePixel = 0
@@ -151,12 +151,15 @@ divider.BorderSizePixel = 0
 
 -- ── Toggle states & helper ──────────────────────────────────
 local toggles = {
-    autoSell        = true,
-    autoCraft       = true,
-    keepPage        = true,
-    autoTp          = true,
-    keepGoldenCod   = false,
-    keepGoldenTooth = false,
+    autoSell                  = true,
+    autoCraft                 = true,
+    keepPage                  = true,
+    autoTp                    = true,
+    keepGoldenCod             = true,
+    keepGoldenTooth           = true,
+    keepEpicSuperCharm        = true,
+    keepLegendaryUltimateCharm = true,
+    keepEpicUltimateCharm     = true,
 }
 local PAGE_CRAFT_THRESHOLD = 32
 
@@ -220,31 +223,52 @@ makeToggle(main, 248,
     Color3.fromRGB(18, 30, 50),    Color3.fromRGB(45, 22, 22),
     true, function(val) toggles.autoTp = val end)
 
--- TOGGLE 5: Skip Golden Cod on sell (default OFF)
+-- TOGGLE 5: Skip Golden Cod on sell (default ON)
 makeToggle(main, 278,
     "Skip 'Golden Cod'   ",
     Color3.fromRGB(255, 210, 80), Color3.fromRGB(255, 110, 110),
     Color3.fromRGB(45, 38, 10),   Color3.fromRGB(45, 22, 22),
-    false, function(val) toggles.keepGoldenCod = val end)
+    true, function(val) toggles.keepGoldenCod = val end)
 
--- TOGGLE 6: Skip Golden Tooth on sell (default OFF)
+-- TOGGLE 6: Skip Golden Tooth on sell (default ON)
 makeToggle(main, 308,
     "Skip 'Golden Tooth'   ",
     Color3.fromRGB(255, 210, 80), Color3.fromRGB(255, 110, 110),
     Color3.fromRGB(45, 38, 10),   Color3.fromRGB(45, 22, 22),
-    false, function(val) toggles.keepGoldenTooth = val end)
+    true, function(val) toggles.keepGoldenTooth = val end)
+
+-- TOGGLE 7: Skip Epic Super Charm on sell (default ON)
+makeToggle(main, 338,
+    "Skip 'Epic Super Charm'   ",
+    Color3.fromRGB(255, 210, 80), Color3.fromRGB(255, 110, 110),
+    Color3.fromRGB(45, 38, 10),   Color3.fromRGB(45, 22, 22),
+    true, function(val) toggles.keepEpicSuperCharm = val end)
+
+-- TOGGLE 8: Skip Legendary Ultimate Charm on sell (default ON)
+makeToggle(main, 368,
+    "Skip 'Legendary Ultimate Charm'   ",
+    Color3.fromRGB(255, 210, 80), Color3.fromRGB(255, 110, 110),
+    Color3.fromRGB(45, 38, 10),   Color3.fromRGB(45, 22, 22),
+    true, function(val) toggles.keepLegendaryUltimateCharm = val end)
+
+-- TOGGLE 9: Skip Epic Ultimate Charm on sell (default ON)
+makeToggle(main, 398,
+    "Skip 'Epic Ultimate Charm'   ",
+    Color3.fromRGB(255, 210, 80), Color3.fromRGB(255, 110, 110),
+    Color3.fromRGB(45, 38, 10),   Color3.fromRGB(45, 22, 22),
+    true, function(val) toggles.keepEpicUltimateCharm = val end)
 
 -- Divider 2
 local divider2 = Instance.new("Frame", main)
 divider2.Size = UDim2.new(1, -24, 0, 1)
-divider2.Position = UDim2.new(0, 12, 0, 340)
+divider2.Position = UDim2.new(0, 12, 0, 430)
 divider2.BackgroundColor3 = Color3.fromRGB(40, 50, 70)
 divider2.BorderSizePixel = 0
 
 -- START / STOP button
 local toggleBtn = Instance.new("TextButton", main)
 toggleBtn.Size = UDim2.new(1, -24, 0, 36)
-toggleBtn.Position = UDim2.new(0, 12, 0, 348)
+toggleBtn.Position = UDim2.new(0, 12, 0, 438)
 toggleBtn.BackgroundColor3 = Color3.fromRGB(0, 155, 70)
 toggleBtn.TextColor3 = Color3.new(1, 1, 1)
 toggleBtn.Text = "▶   START"
@@ -260,7 +284,7 @@ startStroke.Transparency = 0.5
 -- Footer info
 local footer = Instance.new("TextLabel", main)
 footer.Size = UDim2.new(1, -24, 0, 100)
-footer.Position = UDim2.new(0, 12, 0, 392)
+footer.Position = UDim2.new(0, 12, 0, 482)
 footer.BackgroundColor3 = Color3.fromRGB(8, 10, 16)
 footer.TextColor3 = Color3.fromRGB(90, 110, 140)
 footer.Font = Enum.Font.Code
@@ -810,6 +834,24 @@ local function _performAutoSellInternal()
         return false
     end
 
+    local function isEpicSuperCharmCard(card)
+        if cardMatches(card, {"epic", "super", "charm"}) then return true end
+        if cardMatches(card, {"epicsupercharm"}) then return true end
+        return false
+    end
+
+    local function isLegendaryUltimateCharmCard(card)
+        if cardMatches(card, {"legendary", "ultimate", "charm"}) then return true end
+        if cardMatches(card, {"legendaryultimatecharm"}) then return true end
+        return false
+    end
+
+    local function isEpicUltimateCharmCard(card)
+        if cardMatches(card, {"epic", "ultimate", "charm"}) then return true end
+        if cardMatches(card, {"epicultimatecharm"}) then return true end
+        return false
+    end
+
     -- Pomocnik: Karty ryb w strip_area posortowane OD LEWEJ DO PRAWEJ
     local function getCards()
         local result = {}
@@ -821,6 +863,9 @@ local function _performAutoSellInternal()
                     if toggles.keepPage and isPageCard(ch) then skip = true end
                     if toggles.keepGoldenCod and isGoldenCodCard(ch) then skip = true end
                     if toggles.keepGoldenTooth and isGoldenToothCard(ch) then skip = true end
+                    if toggles.keepEpicSuperCharm and isEpicSuperCharmCard(ch) then skip = true end
+                    if toggles.keepLegendaryUltimateCharm and isLegendaryUltimateCharmCard(ch) then skip = true end
+                    if toggles.keepEpicUltimateCharm and isEpicUltimateCharmCard(ch) then skip = true end
                     if not skip then
                         table.insert(result, ch)
                     end
