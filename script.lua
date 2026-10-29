@@ -32,6 +32,84 @@ lp.Idled:Connect(function()
     end)
 end)
 
+-- ================= FPS BOOST (LOW LAG) =================
+local fpsBoostEnabled = false
+local fpsSavedStates = setmetatable({}, { __mode = "k" })
+local fpsSavedLighting = {}
+local fpsConnections = {}
+
+local function fpsApplyToInstance(inst)
+    if inst:IsA("ParticleEmitter") or inst:IsA("Trail") or inst:IsA("Beam")
+        or inst:IsA("Smoke") or inst:IsA("Fire") or inst:IsA("Sparkles") then
+        if fpsSavedStates[inst] == nil then fpsSavedStates[inst] = inst.Enabled end
+        pcall(function() inst.Enabled = false end)
+    elseif inst:IsA("Decal") or inst:IsA("Texture") then
+        if fpsSavedStates[inst] == nil then fpsSavedStates[inst] = inst.Transparency end
+        pcall(function() inst.Transparency = 1 end)
+    elseif inst:IsA("BasePart") then
+        if fpsSavedStates[inst] == nil then fpsSavedStates[inst] = inst.CastShadow end
+        pcall(function() inst.CastShadow = false end)
+    end
+end
+
+local function fpsRevertInstance(inst)
+    local saved = fpsSavedStates[inst]
+    if saved == nil then return end
+    if inst:IsA("ParticleEmitter") or inst:IsA("Trail") or inst:IsA("Beam")
+        or inst:IsA("Smoke") or inst:IsA("Fire") or inst:IsA("Sparkles") then
+        pcall(function() inst.Enabled = saved end)
+    elseif inst:IsA("Decal") or inst:IsA("Texture") then
+        pcall(function() inst.Transparency = saved end)
+    elseif inst:IsA("BasePart") then
+        pcall(function() inst.CastShadow = saved end)
+    end
+    fpsSavedStates[inst] = nil
+end
+
+local function setFpsBoost(enabled)
+    fpsBoostEnabled = enabled
+    local Lighting = game:GetService("Lighting")
+
+    if enabled then
+        fpsSavedLighting.GlobalShadows = Lighting.GlobalShadows
+        pcall(function() Lighting.GlobalShadows = false end)
+
+        for _, eff in ipairs(Lighting:GetChildren()) do
+            if eff:IsA("PostEffect") then
+                fpsSavedLighting[eff] = eff.Enabled
+                pcall(function() eff.Enabled = false end)
+            end
+        end
+
+        for _, inst in ipairs(Workspace:GetDescendants()) do
+            fpsApplyToInstance(inst)
+        end
+
+        table.insert(fpsConnections, Workspace.DescendantAdded:Connect(function(inst)
+            if fpsBoostEnabled then
+                task.defer(fpsApplyToInstance, inst)
+            end
+        end))
+    else
+        for _, conn in ipairs(fpsConnections) do conn:Disconnect() end
+        fpsConnections = {}
+
+        if fpsSavedLighting.GlobalShadows ~= nil then
+            pcall(function() Lighting.GlobalShadows = fpsSavedLighting.GlobalShadows end)
+        end
+        for _, eff in ipairs(Lighting:GetChildren()) do
+            if eff:IsA("PostEffect") and fpsSavedLighting[eff] ~= nil then
+                pcall(function() eff.Enabled = fpsSavedLighting[eff] end)
+            end
+        end
+        fpsSavedLighting = {}
+
+        for _, inst in ipairs(Workspace:GetDescendants()) do
+            fpsRevertInstance(inst)
+        end
+    end
+end
+
 -- ================= GUI =================
 local sg = Instance.new("ScreenGui")
 sg.Name = "PB_AutoFish_UI"
@@ -40,7 +118,7 @@ sg.Parent = CoreGui
 
 -- Main window
 local main = Instance.new("Frame", sg)
-main.Size = UDim2.new(0, 340, 0, 590)
+main.Size = UDim2.new(0, 340, 0, 620)
 main.Position = UDim2.new(0.04, 0, 0.22, 0)
 main.BackgroundColor3 = Color3.fromRGB(12, 14, 20)
 main.BorderSizePixel = 0
@@ -258,17 +336,24 @@ makeToggle(main, 398,
     Color3.fromRGB(45, 38, 10),   Color3.fromRGB(45, 22, 22),
     true, function(val) toggles.keepEpicUltimateCharm = val end)
 
+-- TOGGLE 10: FPS Boost / Low Lag mode (default OFF)
+makeToggle(main, 428,
+    "⚡ FPS Boost (Low Lag)   ",
+    Color3.fromRGB(120, 230, 255), Color3.fromRGB(255, 110, 110),
+    Color3.fromRGB(14, 40, 48),    Color3.fromRGB(45, 22, 22),
+    false, function(val) setFpsBoost(val) end)
+
 -- Divider 2
 local divider2 = Instance.new("Frame", main)
 divider2.Size = UDim2.new(1, -24, 0, 1)
-divider2.Position = UDim2.new(0, 12, 0, 430)
+divider2.Position = UDim2.new(0, 12, 0, 460)
 divider2.BackgroundColor3 = Color3.fromRGB(40, 50, 70)
 divider2.BorderSizePixel = 0
 
 -- START / STOP button
 local toggleBtn = Instance.new("TextButton", main)
 toggleBtn.Size = UDim2.new(1, -24, 0, 36)
-toggleBtn.Position = UDim2.new(0, 12, 0, 438)
+toggleBtn.Position = UDim2.new(0, 12, 0, 468)
 toggleBtn.BackgroundColor3 = Color3.fromRGB(0, 155, 70)
 toggleBtn.TextColor3 = Color3.new(1, 1, 1)
 toggleBtn.Text = "▶   START"
@@ -284,7 +369,7 @@ startStroke.Transparency = 0.5
 -- Footer info
 local footer = Instance.new("TextLabel", main)
 footer.Size = UDim2.new(1, -24, 0, 100)
-footer.Position = UDim2.new(0, 12, 0, 482)
+footer.Position = UDim2.new(0, 12, 0, 512)
 footer.BackgroundColor3 = Color3.fromRGB(8, 10, 16)
 footer.TextColor3 = Color3.fromRGB(90, 110, 140)
 footer.Font = Enum.Font.Code
