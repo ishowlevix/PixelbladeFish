@@ -372,15 +372,35 @@ subtitle.TextXAlignment = Enum.TextXAlignment.Right
 subtitle.Text = "Pixel Blade"
 
 local xb = Instance.new("TextButton", header)
-xb.Size = UDim2.new(0, 24, 0, 24)
-xb.Position = UDim2.new(1, -30, 0, 7)
+xb.Size = UDim2.new(0, 22, 0, 22)
+xb.Position = UDim2.new(1, -30, 0, 8)
 xb.BackgroundColor3 = Color3.fromRGB(180, 35, 35)
 xb.TextColor3 = Color3.new(1, 1, 1)
 xb.Text = "✕"
 xb.Font = Enum.Font.GothamBold
 xb.TextSize = 11
 xb.BorderSizePixel = 0
-Instance.new("UICorner", xb).CornerRadius = UDim.new(0, 4)
+Instance.new("UICorner", xb).CornerRadius = UDim.new(1, 0)
+
+-- Minimized bubble (appears top-right of screen when UI is hidden)
+local bubble = Instance.new("TextButton", sg)
+bubble.Name = "PB_Bubble"
+bubble.Size = UDim2.new(0, 42, 0, 42)
+bubble.Position = UDim2.new(1, -58, 0.04, 0)
+bubble.BackgroundColor3 = Color3.fromRGB(10, 20, 38)
+bubble.TextColor3 = Color3.fromRGB(0, 170, 255)
+bubble.Text = "🐟"
+bubble.Font = Enum.Font.GothamBold
+bubble.TextSize = 18
+bubble.BorderSizePixel = 0
+bubble.Visible = false
+bubble.Active = true
+bubble.Draggable = true
+Instance.new("UICorner", bubble).CornerRadius = UDim.new(1, 0)
+local bubbleStroke = Instance.new("UIStroke", bubble)
+bubbleStroke.Color = Color3.fromRGB(0, 150, 255)
+bubbleStroke.Thickness = 1.5
+bubbleStroke.Transparency = 0.25
 
 -- ── Status section ──────────────────────────────────────────
 local function makeLabel(parent, yPos, color, size)
@@ -585,12 +605,28 @@ local function cleanup()
     sg:Destroy()
 end
 
-xb.MouseButton1Click:Connect(cleanup)
+local function minimizeUI()
+    main.Visible = false
+    bubble.Visible = true
+end
+
+local function restoreUI()
+    bubble.Visible = false
+    main.Visible = true
+end
+
+xb.MouseButton1Click:Connect(minimizeUI)
+bubble.MouseButton1Click:Connect(restoreUI)
+
 UserInputService.InputBegan:Connect(function(i, g)
     if g then return end
     if i.KeyCode == Enum.KeyCode.End then cleanup() end
     if i.KeyCode == Enum.KeyCode.RightControl then
-        main.Visible = not main.Visible
+        if main.Visible then
+            minimizeUI()
+        else
+            restoreUI()
+        end
     end
 end)
 
