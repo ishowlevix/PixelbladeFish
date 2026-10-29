@@ -12,6 +12,13 @@ local GuiService = game:GetService("GuiService")
 local UserInputService = game:GetService("UserInputService")
 local CoreGui = game:GetService("CoreGui")
 
+-- ============================================================
+-- CONFIG
+-- ============================================================
+-- 7ot hna l-link dyal Discord webhook dyalk bach tewsel lik l-history
+-- (Legendary catches + crafted books) wnta AFK. Khalih "" bach ytfa.
+local DISCORD_WEBHOOK_URL = ""
+
 local remotes = ReplicatedStorage:WaitForChild("_network_remotes", 5)
 local pg = lp:WaitForChild("PlayerGui")
 local fishingHud = pg:WaitForChild("fishing_hud", 10)
@@ -108,6 +115,56 @@ local function setFpsBoost(enabled)
             fpsRevertInstance(inst)
         end
     end
+end
+
+-- ================= DISCORD WEBHOOK (AFK HISTORY LOG) =================
+local bookCraftCount = 0
+
+local httpRequest = (syn and syn.request) or (http and http.request) or http_request or request
+
+local function sendDiscordEmbed(title, description, color)
+    if not DISCORD_WEBHOOK_URL or DISCORD_WEBHOOK_URL == "" then return end
+    if not httpRequest then return end
+
+    local ok, payload = pcall(function()
+        return game:GetService("HttpService"):JSONEncode({
+            username = "PB AutoFish",
+            embeds = { {
+                title = title,
+                description = description,
+                color = color or 3447003,
+            } },
+        })
+    end)
+    if not ok then return end
+
+    task.spawn(function()
+        pcall(function()
+            httpRequest({
+                Url = DISCORD_WEBHOOK_URL,
+                Method = "POST",
+                Headers = { ["Content-Type"] = "application/json" },
+                Body = payload,
+            })
+        end)
+    end)
+end
+
+-- Kay7awl y-extracti smiya o rarity mn l-arguments li kay-fire-hom remote
+-- l-fishing_caught_item / fishing_caught_charm / fishing_caught_wish.
+-- Chkal l-data ma mt2akdch, ila ma lqach walo kay-rj3 nil (ma ghadich tsift).
+local function extractCatchInfo(...)
+    local args = { ... }
+    for _, v in ipairs(args) do
+        if type(v) == "table" then
+            local name = v.Name or v.name or v.ItemName or v.itemName or v.id or v.Id
+            local rarity = v.Rarity or v.rarity or v.Tier or v.tier
+            if name or rarity then
+                return name and tostring(name) or "Unknown", rarity and tostring(rarity) or ""
+            end
+        end
+    end
+    return nil, nil
 end
 
 -- ================= GUI =================
@@ -713,11 +770,22 @@ task.spawn(function()
 end)
 
 -- OBSŁUGA WSZYSTKICH TYPÓW ŁUPÓW (RYBY, KONICZYNKI/CHARMY, ŻYCZENIA)
-local function onLootCaught()
+local function onLootCaught(...)
     currentCatches = currentCatches + 1
     lastFishActionTime = tick()
     inMinigame = false
     task.spawn(updateUIStatus)
+
+    if toggles.webhookLog then
+        local name, rarity = extractCatchInfo(...)
+        if rarity and rarity:lower():find("legendary") then
+            sendDiscordEmbed(
+                "🏆 Legendary Catch",
+                string.format("**%s**\nCatch #%d", name or "Unknown item", currentCatches),
+                15844367
+            )
+        end
+    end
 end
 
 if remotes then
@@ -937,6 +1005,12 @@ local function _performAutoSellInternal()
         return false
     end
 
+    local function isDarkKeyCard(card)
+        if cardMatches(card, {"dark", "key"}) then return true end
+        if cardMatches(card, {"darkkey"}) then return true end
+        return false
+    end
+
     -- Pomocnik: Karty ryb w strip_area posortowane OD LEWEJ DO PRAWEJ
     local function getCards()
         local result = {}
@@ -949,6 +1023,7 @@ local function _performAutoSellInternal()
                     if toggles.keepGoldenCod and isGoldenCodCard(ch) then skip = true end
                     if toggles.keepGoldenTooth and isGoldenToothCard(ch) then skip = true end
                     if toggles.keepEpicSuperCharm and isEpicSuperCharmCard(ch) then skip = true end
+                    if toggles.keepDarkKey and isDarkKeyCard(ch) then skip = true end
                     if toggles.keepLegendaryUltimateCharm and isLegendaryUltimateCharmCard(ch) then skip = true end
                     if toggles.keepEpicUltimateCharm and isEpicUltimateCharmCard(ch) then skip = true end
                     if not skip then
@@ -1247,6 +1322,14 @@ local function _performAutoCraftPagesInternal()
             task.wait(0.15)
             local nowPages = getPagesFromArmory()
             if nowPages < prevPages then
+                bookCraftCount = bookCraftCount + 1
+                if toggles.webhookLog then
+                    sendDiscordEmbed(
+                        "📖 Book Crafted",
+                        string.format("Book #%d crafted\nPages remaining: %d", bookCraftCount, nowPages),
+                        10181046
+                    )
+                end
                 break -- craft sie udal, strony sie zmniejszyly
             end
         end
