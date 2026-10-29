@@ -17,7 +17,7 @@ local CoreGui = game:GetService("CoreGui")
 -- ============================================================
 -- 7ot hna l-link dyal Discord webhook dyalk bach tewsel lik l-history
 -- (Legendary catches + crafted books) wnta AFK. Khalih "" bach ytfa.
-local DISCORD_WEBHOOK_URL = ""
+local DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1565333836911349870/W2UVR08c2dBQlG3zDluD5yYxwpV7dZQEC4Y6nws35XqGY9uMy1tq0QNGnlCfggGk6xNu"
 
 local remotes = ReplicatedStorage:WaitForChild("_network_remotes", 5)
 local pg = lp:WaitForChild("PlayerGui")
